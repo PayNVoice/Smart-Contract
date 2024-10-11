@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.27;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 contract Multiparty {
 
   enum Milestone1 {
@@ -19,6 +21,8 @@ contract Multiparty {
     COMPLETED
   }
 
+
+ 
   
 
   struct MultipartyRecord {
@@ -31,8 +35,10 @@ contract Multiparty {
   }
   mapping(address => mapping(uint256 => MultipartyRecord)) public multipartyList;
   mapping(address => uint256) public totalMultiPartySystemCreated;
+  
 
   address multipartyCreator;
+  address lskTokenAddress;
 
   error ADDRESS_ZERO_NOT_PERMITED();
   error NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();
@@ -41,14 +47,20 @@ contract Multiparty {
   error LENGTH_MUST_BE_SAME_WITH_PARTYMEMBERS_LENGTH();
   error TERMS_FOR_BUSINESS_CANNOT_BE_EMPTY();
   error PENALTY_RATE_MUST_BE_SET();
+  error NOT_A_MEMBER();
+  error NOT_AN_ALLOCATED_AMOUNT();
+  error INSUFFICIENT_AMOUNT();
 
   event MultiPartyCreatedSuccessfully(address indexed whoCreates);
+  event  DepositSuccessful(address indexed depositor , uint256 amount, uint256 counterID);
 
-  constructor(){
+
+  constructor(address _lskTokenAddress){
     if(msg.sender == address(0)){
       revert ADDRESS_ZERO_NOT_PERMITED();
     }
     multipartyCreator = msg.sender;
+     lskTokenAddress = _lskTokenAddress;
   }
 
   function createMultiPartySystem(
@@ -86,6 +98,7 @@ contract Multiparty {
         revert PENALTY_RATE_MUST_BE_SET();
       }
 
+
       MultipartyRecord memory newRecord = MultipartyRecord({
         partyMembers: _partMem,
         totalAmountAllocatedForEachPartyMember: _totalAmountForEach,
@@ -104,4 +117,54 @@ contract Multiparty {
       emit MultiPartyCreatedSuccessfully(msg.sender);
       
   }
+
+
+
+  function depositToPlatform(uint256 _amount, uint256 _counterID) public {
+
+  
+    MultipartyRecord storage record = multipartyList[msg.sender][_counterID];
+
+    bool isMember = false;
+    uint256 allocatedAmount;
+    
+   
+    for (uint256 i = 0; i < record.partyMembers.length; i++) {
+        if (record.partyMembers[i] == msg.sender) {
+            isMember = true;
+            allocatedAmount = record.totalAmountAllocatedForEachPartyMember[i]; 
+            break;
+        }
+    }
+
+    if (!isMember) {
+        revert NOT_A_MEMBER();
+    }
+
+    if (_amount != allocatedAmount) {
+        revert NOT_AN_ALLOCATED_AMOUNT();
+    }
+
+    IERC20 lskToken = IERC20(lskTokenAddress); 
+
+    uint256 _userTokenBalance = lskToken.balanceOf(msg.sender);
+
+     if (_userTokenBalance < _amount) {
+
+        revert INSUFFICIENT_AMOUNT();
+    }
+   
+
+    lskToken.transferFrom(msg.sender, address(this), _amount);
+
+    emit  DepositSuccessful(msg.sender, _amount, _counterID);
+}
+
+
+  
+
+
+
+
+
 }
