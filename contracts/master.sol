@@ -73,7 +73,15 @@ contract MasterContract {
         emit BusinessRegistered(msg.sender, _name);
     }
 
-    function createAgreement(address _supplier, address _customer, uint256 _totalAmount, string[] memory _milestoneDescriptions,  uint256 _deadline, uint256[] memory _milestoneAmounts, string memory _terms) external onlyRegistered returns(uint256 aggreementId)  {
+    function createAgreement(
+        address _supplier, 
+        address _customer, 
+        uint256 _totalAmount, 
+        string[] memory _milestoneDescriptions,  
+        uint256 _deadline, 
+        uint256[] memory _milestoneAmounts, 
+        string memory _terms
+        ) external onlyRegistered returns(uint256 aggreementId)  {
         require(_supplier != address(0) && _customer != address(0), "Invalid addresses");
 
         B2BAgreement storage newAggreement = agreements[aggreementCounter];
