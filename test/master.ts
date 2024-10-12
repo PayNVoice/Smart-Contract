@@ -110,45 +110,85 @@ describe("MasterContract", function () {
    });
 
    describe("Invoice Generation", function () {
-    it("Should generate invoice for a milestone", async function () {
-        const { masterContract, supplier, customer } = await loadFixture(deployMasterContract);
+        it("Should generate invoice for a milestone", async function () {
+            const { masterContract, supplier, customer } = await loadFixture(deployMasterContract);
 
-        //register business
-        await masterContract.connect(customer).registerBusiness("Customer Business", "Tech");
+            //register business
+            await masterContract.connect(customer).registerBusiness("Customer Business", "Tech");
 
-        // Create an agreement with milestones
-        const milestoneDescriptions = ["Design", "Development", "Testing"];
-        const milestoneAmounts = [
-        ethers.parseUnits("100", 18), 
-        ethers.parseUnits("200", 18), 
-        ethers.parseUnits("150", 18)
-        ];
-        const deadline = Math.floor(Date.now() / 1000) + 86400; // 24 hours from now
-        const totalAmount = milestoneAmounts.reduce((acc, val) => acc + Number(ethers.formatUnits(val, 18)), 0);
+            // Create an agreement with milestones
+            const milestoneDescriptions = ["Design", "Development", "Testing"];
+            const milestoneAmounts = [
+            ethers.parseUnits("100", 18), 
+            ethers.parseUnits("200", 18), 
+            ethers.parseUnits("150", 18)
+            ];
+            const deadline = Math.floor(Date.now() / 1000) + 86400; // 24 hours from now
+            const totalAmount = milestoneAmounts.reduce((acc, val) => acc + Number(ethers.formatUnits(val, 18)), 0);
 
-        await masterContract.connect(customer).createAgreement(
-        supplier.address,
-        customer.address,
-        totalAmount, 
-        milestoneDescriptions,
-        deadline,
-        milestoneAmounts,
-        "Standard Terms"
-        );
+            await masterContract.connect(customer).createAgreement(
+            supplier.address,
+            customer.address,
+            totalAmount, 
+            milestoneDescriptions,
+            deadline,
+            milestoneAmounts,
+            "Standard Terms"
+            );
 
-        // Generate invoice for the first milestone (index 0)
-        await expect(masterContract.connect(supplier).generateInvoice(1, 0))
-        .to.emit(masterContract, "InvoiceGenerated")
-        .withArgs(
-            1,
-            0,
-            "Invoice for milestone Design. Amount: 100000000000000000000"
-        );
+            // Generate invoice for the first milestone (index 0)
+            await expect(masterContract.connect(supplier).generateInvoice(1, 0))
+            .to.emit(masterContract, "InvoiceGenerated")
+            .withArgs(
+                1,
+                0,
+                "Invoice for milestone Design. Amount: 100000000000000000000"
+            );
+        });
     });
-});
 
+    // describe("Milestone Completion and Payment", function () {
+    //     it("Should allow supplier to mark milestone as completed and release payment upon confirmation", async function () {
+    //         const { masterContract, token, supplier, customer } = await loadFixture(deployMasterContract);
 
-   
+    //         // Register business
+    //         await masterContract.connect(customer).registerBusiness("Customer Business", "Tech");
 
+    //         // Create an agreement
+    //         const milestoneDescriptions = ["Design", "Development"];
+    //         const milestoneAmounts = [
+    //             ethers.parseUnits("100", 18), 
+    //             ethers.parseUnits("200", 18)
+    //         ];
+    //         const deadline = Math.floor(Date.now() / 1000) + 86400; // 24 hours from now
+    //         const totalAmount = milestoneAmounts.reduce((acc, val) => acc.add(val), ethers.BigNumber.from(0));
 
+    //         await masterContract.connect(customer).createAgreement(
+    //             supplier.address,
+    //             customer.address,
+    //             totalAmount, 
+    //             milestoneDescriptions,
+    //             deadline,
+    //             milestoneAmounts,
+    //             "Standard Terms"
+    //         );
+
+    //         // Deposit to escrow
+    //         const depositAmount = ethers.parseUnits("300", 18);
+    //         await token.transfer(customer.address, depositAmount);
+    //         await token.connect(customer).approve(masterContract, depositAmount);
+    //         await masterContract.connect(customer).depositToEscrow(1, depositAmount);
+
+    //         // Supplier marks milestone as completed
+    //         await masterContract.connect(supplier).markMilesstoneCompleted(1, 0); // Milestone 0
+
+    //         // Customer confirms milestone completion
+    //         await masterContract.connect(customer).confirmMilestoneCompletion(1, 0);
+
+    //         // Verify payment release
+    //         expect(await token.balanceOf(supplier.address)).to.equal(ethers.parseUnits("100", 18)); // Payment should be released for milestone 0
+    //         const agreement = await masterContract.agreements(1);
+    //         expect(agreement.milestones[0].status).to.equal(2); // Check if the milestone status is "Paid"
+    //     });
+    // });
 });

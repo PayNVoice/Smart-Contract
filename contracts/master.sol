@@ -106,6 +106,7 @@ contract MasterContract {
         emit DepositReceived(amount, msg.sender);
     }
 
+    //supplier marks milestone completed
     function markMilesstoneCompleted(uint256 _agreementId, uint256 _milestoneIndex ) external {
         B2BAgreement storage agreement = agreements[_agreementId];
         require(msg.sender == agreement.supplier, "Only supplier can mark as complete");
@@ -116,7 +117,21 @@ contract MasterContract {
 
     }
 
-     // Release payment for a completed milestone using ERC20 tokens
+    // customer confirms the completion of milestone
+    function confirmMilestoneCompletion(uint256 _agreementId, uint256 _milestoneIndex) external {
+        B2BAgreement storage agreement = agreements[_agreementId];
+        require(msg.sender == agreement.customer, "Only customer can confirm");
+
+        agreement.milestones[_milestoneIndex].status = mileStoneStatus.customerConfirmed;
+
+        // Release payment if both parties confirm the milestone
+        if (agreement.milestones[_milestoneIndex].status == mileStoneStatus.Completed && 
+            agreement.milestones[_milestoneIndex].status == mileStoneStatus.customerConfirmed) {
+            releasePayment(_agreementId, _milestoneIndex);
+        }
+    }
+
+    // Release payment for a completed milestone using ERC20 tokens
     function releasePayment(uint256 _agreementId, uint256 _milestoneIndex) internal {
         B2BAgreement storage agreement = agreements[_agreementId];
         require(agreement.milestones[_milestoneIndex].status == mileStoneStatus.Completed, "Milestone not completed");
