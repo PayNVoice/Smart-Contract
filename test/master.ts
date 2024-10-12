@@ -66,6 +66,49 @@ describe("MasterContract", function () {
         });
    });
 
+    describe("Deposit to Escrow", function () {
+        it("Should allow customer to deposit to escrow", async function () {
+        const { masterContract, token, customer, supplier } = await loadFixture(deployMasterContract);
+
+        //register business
+        await masterContract.connect(customer).registerBusiness("Customer Business", "Tech");
+
+        // Create agreement
+        const milestoneDescriptions = ["Design", "Development", "Testing"];
+        const milestoneAmounts = [
+            ethers.parseUnits("100", 18), 
+            ethers.parseUnits("200", 18), 
+            ethers.parseUnits("150", 18)
+        ];
+        const deadline = Math.floor(Date.now() / 1000) + 86400; // 24 hours from now
+        const totalAmount = milestoneAmounts.reduce((acc, val) => acc + Number(ethers.formatUnits(val, 18)), 0);
+
+        await masterContract.connect(customer).createAgreement(
+            supplier.address,
+            customer.address,
+            totalAmount, 
+            milestoneDescriptions,
+            deadline,
+            milestoneAmounts,
+            "Standard Terms"
+        );
+
+
+        // Transfer tokens to customer
+        const depositAmount = ethers.parseUnits("1000", 18);
+        await token.transfer(customer.address, depositAmount);
+        
+        // Customer approves MasterContract to spend tokens
+        await token.connect(customer).approve(masterContract, depositAmount);
+
+        // Customer deposits to the agreement's escrow
+        await masterContract.connect(customer).depositToEscrow(1, depositAmount);
+
+        expect(await token.balanceOf(masterContract)).to.equal(depositAmount);
+        expect(await masterContract.escrowAmount()).to.equal(depositAmount);
+        });
+   });
+
    
 
 
