@@ -47,10 +47,11 @@ contract MasterContract {
     mapping(uint256 =>  B2BAgreement) public agreements;
 
     event BusinessRegistered(address indexed businessAddress, string indexed businessName);
-    event AgreementCreated(uint256 agreementId, address supplier, address customer, uint256 totalAmount);
-    event DepositReceived(uint256 amount, address from);
-    event PaymentReleased(uint256 agreementId, uint256 milestoneIndex, uint256 amount);
-    event InvoiceGenerated(uint256 agreementId, uint256 milestoneIndex, string invoiceDetails);
+    event AgreementCreated(uint256 indexed agreementId, address indexed supplier, address indexed customer, uint256  totalAmount);
+    event DepositReceived(uint256 indexed amount, address from);
+    event PaymentReleased(uint256 indexed agreementId, uint256 indexed milestoneIndex, uint256 indexed amount);
+    event InvoiceGenerated(uint256 indexed agreementId, uint256 indexed milestoneIndex, string indexed invoiceDetails);
+    event MilestoneCompleted(uint256 indexed agreementId, uint256 indexed milestoneIndex);
 
     modifier onlyRegistered(){
         require(registeredBusiness[msg.sender].isRegistered, "Business not registered");
@@ -105,6 +106,16 @@ contract MasterContract {
         emit DepositReceived(amount, msg.sender);
     }
 
+    function markMilesstoneCompleted(uint256 _agreementId, uint256 _milestoneIndex ) external {
+        B2BAgreement storage agreement = agreements[_agreementId];
+        require(msg.sender == agreement.supplier, "Only supplier can mark as complete");
+        require(agreement.milestones[_milestoneIndex].status == mileStoneStatus.Pending, "Milestone already completed");
+
+        agreement.milestones[_milestoneIndex].status = mileStoneStatus.Completed;
+        emit MilestoneCompleted(_agreementId, _milestoneIndex);
+
+    }
+
      // Release payment for a completed milestone using ERC20 tokens
     function releasePayment(uint256 _agreementId, uint256 _milestoneIndex) internal {
         B2BAgreement storage agreement = agreements[_agreementId];
@@ -124,7 +135,7 @@ contract MasterContract {
 
     //invoice for a milestone
     function generateInvoice(uint256 __aggreementId, uint256 _milestoneIndex) external {
-          B2BAgreement storage agreement = agreements[__aggreementId];
+        B2BAgreement storage agreement = agreements[__aggreementId];
         require(msg.sender == agreement.supplier || msg.sender == agreement.customer, "Unauthorized access");
 
         string memory invoiceDetails = string(abi.encodePacked(
