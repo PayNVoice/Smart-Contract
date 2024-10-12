@@ -4,6 +4,7 @@ import {
 import { expect } from "chai";
 import hre, { ethers } from "hardhat";
 
+
 describe("MasterContract", function () {
     async function deployToken(){
         const [owner, otherAccount] = await hre.ethers.getSigners();
@@ -33,5 +34,39 @@ describe("MasterContract", function () {
         expect(registeredBusiness.businessName).to.equal("MyBusiness");
         expect(registeredBusiness.category).to.equal("Software");
         });
-  });
+   });
+
+   describe("Agreement Creation", function () {
+        it("Should create an agreement successfully", async function () {
+            const { masterContract, supplier, customer } = await loadFixture(deployMasterContract);
+
+            const milestoneDescriptions = ["Design", "Development", "Testing"];
+            const milestoneAmounts = [ethers.parseUnits("100", 18), ethers.parseUnits("200", 18), ethers.parseUnits("150", 18)];
+            const deadline = Math.floor(Date.now() / 1000) + 86400; // 24 hours from now
+            const totalAmount = milestoneAmounts.reduce((acc, val) => acc + Number(ethers.formatUnits(val, 18)), 0);
+
+            // Register the customer as a business
+            await masterContract.connect(customer).registerBusiness("My Business", "Tech");
+
+            await masterContract.connect(customer).createAgreement(
+            supplier.address,
+            customer.address,
+            totalAmount, 
+            milestoneDescriptions,
+            deadline,
+            milestoneAmounts,
+            "Standard Terms"
+            );
+
+            const agreement = await masterContract.agreements(1); // Agreement ID 1
+            expect(agreement.supplier).to.equal(supplier.address);
+            expect(agreement.customer).to.equal(customer.address);
+            expect(agreement.totalAmount).to.equal(totalAmount);
+            expect(agreement.deadline).to.equal(deadline);
+        });
+   });
+
+   
+
+
 });
