@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
+
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import './token.sol';
@@ -51,6 +52,11 @@ contract MasterContract {
     event PaymentReleased(uint256 agreementId, uint256 milestoneIndex, uint256 amount);
     event InvoiceGenerated(uint256 agreementId, uint256 milestoneIndex, string invoiceDetails);
 
+    modifier onlyRegistered(){
+        require(registeredBusiness[msg.sender].isRegistered, "Business not registered");
+        _;
+    }
+
     constructor(address tokenAddress){
         aggreementCounter = 1;
         paymentToken = Token(tokenAddress);
@@ -66,7 +72,7 @@ contract MasterContract {
         emit BusinessRegistered(msg.sender, _name);
     }
 
-    function createAgreement(address _supplier, address _customer, uint256 _totalAmount, string[] memory _milestoneDescriptions,  uint256 _deadline, uint256[] memory _milestoneAmounts, string memory _terms) external returns(uint256 aggreementId) {
+    function createAgreement(address _supplier, address _customer, uint256 _totalAmount, string[] memory _milestoneDescriptions,  uint256 _deadline, uint256[] memory _milestoneAmounts, string memory _terms) external onlyRegistered returns(uint256 aggreementId)  {
         require(_supplier != address(0) && _customer != address(0), "Invalid addresses");
 
         B2BAgreement storage newAggreement = agreements[aggreementCounter];
