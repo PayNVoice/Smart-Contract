@@ -31,8 +31,10 @@ contract Multiparty {
   }
   mapping(address => mapping(uint256 => MultipartyRecord)) public multipartyList;
   mapping(address => uint256) public totalMultiPartySystemCreated;
+  mapping(address => mapping(uint256 => string)) milestoneDescr;
 
-  address multipartyCreator;
+
+  address public multipartyCreator;
 
   error ADDRESS_ZERO_NOT_PERMITED();
   error NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();
@@ -41,6 +43,7 @@ contract Multiparty {
   error LENGTH_MUST_BE_SAME_WITH_PARTYMEMBERS_LENGTH();
   error TERMS_FOR_BUSINESS_CANNOT_BE_EMPTY();
   error PENALTY_RATE_MUST_BE_SET();
+  error INVALID_MILESTONE_VALUE(uint256 milestone);
 
   event MultiPartyCreatedSuccessfully(address indexed whoCreates);
 
@@ -95,7 +98,7 @@ contract Multiparty {
         penaltyRateForDefaulters: _penalty
       });
 
-      uint256 counter = totalMultiPartySystemCreated[msg.sender];
+       uint256 counter = totalMultiPartySystemCreated[msg.sender];
       multipartyList[msg.sender][counter] = newRecord;
 
       totalMultiPartySystemCreated[msg.sender]++;
