@@ -168,7 +168,7 @@ function getAgreementDetails(uint _id)
 }
 
 
-// function releasePayment( Milestones _mileStone, uint _id) external {
+// function releasePayment( Milestones _mileStone,uint _amount, uint _id) external {
 //    MultipartyRecord storage record = multipartyList[_id][msg.sender];
 
 //         if(_mileStone == Milestones.STARTED){
