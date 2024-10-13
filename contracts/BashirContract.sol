@@ -50,6 +50,26 @@ function getInvoice(uint256 invoiceId) external view returns (Invoice memory) {
 
 }
 
+// get all invoices for a particular client
+function getInvoicesForClient(address client) external view returns (Invoice[] memory) {
+    uint256 count = 0;
+    for (uint256 i = 1; i <= invoiceCounter; i++) {
+        if (invoice[i].clientAddress == client) {
+            count++;
+        }
+    }
+
+    Invoice[] memory clientInvoices = new Invoice[](count);
+    uint256 index = 0;
+    for (uint256 i = 1; i <= invoiceCounter; i++) {
+        if (invoice[i].clientAddress == client) {
+            clientInvoices[index] = invoice[i];
+            index++;
+        }
+    }
+
+    return clientInvoices;
+}
 
 
 /*function for payment*/
