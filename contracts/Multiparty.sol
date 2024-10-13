@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.24;
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Multiparty {
 
@@ -18,8 +19,9 @@ contract Multiparty {
     PARTLY_READY,
     COMPLETED
   }
+// Balance of partyMembers in out contract
+mapping(uint256 partyMemberId => address partyMemberAddress)  public partyMember; 
 
-  
 
   struct MultipartyRecord {
     address[] partyMembers;
@@ -33,8 +35,11 @@ contract Multiparty {
   mapping(address => uint256) public totalMultiPartySystemCreated;
   mapping(address => mapping(uint256 => string)) milestoneDescr;
 
+  address multipartyCreator;
+  address multipartyCreatorBalance;
+  address erc20TokenAddress;
 
-  address public multipartyCreator;
+  address public multipartyCreator
 
   error ADDRESS_ZERO_NOT_PERMITED();
   error NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();
@@ -46,6 +51,7 @@ contract Multiparty {
   error INVALID_MILESTONE_VALUE(uint256 milestone);
 
   event MultiPartyCreatedSuccessfully(address indexed whoCreates);
+  // event Deposited
 
   constructor(){
     if(msg.sender == address(0)){
@@ -107,4 +113,36 @@ contract Multiparty {
       emit MultiPartyCreatedSuccessfully(msg.sender);
       
   }
+
+  // function for the creator to send token to the contract
+  // function depositToken(uint256 _amount) external{
+  //   if(msg.sender == address(0)){
+  //     revert ADDRESS_ZERO_NOT_PERMITED();
+  //   }
+  //   if(erc20TokenAddress == address(0)){
+  //     revert ADDRESS_ZERO_NOT_PERMITED();
+  //   }
+  //   IERC20(erc20TokenAddress).transferFrom(multipartyCreator, address(this), _amount);
+  // }
+
+/*Release Payment*/
+function releasePayment(uint256 partyMemberId, uint256 milestoneIndex, uint256 milestone1Payment, uint256 milestone2Payment, uint256 milestone3Payment) external {
+    // Ensure that the milestone is completed before releasing payment
+    // We assume that there is a mapping to track milestone completion for each party member
+    
+    if (milestoneIndex == 1 && Milestone1.COMPLETED == Milestone1.COMPLETED) {
+        IERC20(erc20TokenAddress).transfer(partyMember[partyMemberId], milestone1Payment);
+    } else if (milestoneIndex == 2 && Milestone2.COMPLETED == Milestone2.COMPLETED) {
+        IERC20(erc20TokenAddress).transfer(partyMember[partyMemberId], milestone2Payment);
+    } else if (milestoneIndex == 3 && Milestone3.COMPLETED == Milestone3.COMPLETED) {
+       IERC20(erc20TokenAddress).transfer(partyMember[partyMemberId], milestone3Payment);
+    } else {
+        revert("Milestone not completed or invalid");
+    }
+}
+
+
+
+
+
 }
