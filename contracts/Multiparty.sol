@@ -124,7 +124,6 @@ mapping(uint256 partyMemberId => address partyMemberAddress)  public partyMember
   //   }
   //   IERC20(erc20TokenAddress).transferFrom(multipartyCreator, address(this), _amount);
   // }
-
 /*Release Payment*/
 function releasePayment(uint256 partyMemberId, uint256 milestoneIndex, uint256 milestone1Payment, uint256 milestone2Payment, uint256 milestone3Payment) external {
     // Ensure that the milestone is completed before releasing payment
@@ -140,9 +139,4 @@ function releasePayment(uint256 partyMemberId, uint256 milestoneIndex, uint256 m
         revert("Milestone not completed or invalid");
     }
 }
-
-
-
-
-
 }
