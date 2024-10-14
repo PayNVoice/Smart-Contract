@@ -29,12 +29,15 @@ contract Multiparty {
     mapping(address => uint256) totalDeposits;
 
   }
-
+  
   mapping(uint => mapping(address => MultipartyRecord)) public multipartyList;
   mapping (uint => bool) isCreated;
   
 
  
+  address public multipartyCreator;
+  address public multipartyCreatorBalance;
+  address public erc20TokenAddress;
 
   error ADDRESS_ZERO_NOT_PERMITED();
   error NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();
@@ -48,6 +51,8 @@ contract Multiparty {
 
   event MultiPartyCreatedSuccessfully(address indexed whoCreates , uint256 indexed agreementID);
   event  DepositSuccessful(address indexed depositor , uint256 amount, uint256 agreementID );
+  event MultiPartyCreatedSuccessfully(address indexed whoCreates);
+
 
 
   constructor(address _tokenAddress){
@@ -110,6 +115,7 @@ contract Multiparty {
 
 
 
+
   function depositToPlatform(uint256 _amount, uint256 _id) public {
 
   require(msg.sender != address(0), "zero address");
@@ -119,6 +125,22 @@ contract Multiparty {
 
     bool isMember = false;
     uint256 allocatedAmount;
+}
+  // function for the creator to send token to the contract
+  // function depositToken(uint256 _amount) external{
+  //   if(msg.sender == address(0)){
+  //     revert ADDRESS_ZERO_NOT_PERMITED();
+  //   }
+  //   if(erc20TokenAddress == address(0)){
+  //     revert ADDRESS_ZERO_NOT_PERMITED();
+  //   }
+  //   IERC20(erc20TokenAddress).transferFrom(multipartyCreator, address(this), _amount);
+  // }
+
+/*Release Payment*/
+function releasePayment(uint256 partyMemberId, uint256 milestoneIndex, uint256 milestone1Payment, uint256 milestone2Payment, uint256 milestone3Payment) external {
+    // We will ensure that the milestone is completed before releasing payment
+    // We assume that there is a mapping to track milestone completion for each party member
     
    
     for (uint256 i = 0; i < record.partyMembers.length; i++) {
