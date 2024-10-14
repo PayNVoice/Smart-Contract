@@ -21,8 +21,6 @@ contract PayNVoice {
     Invoice[] invoiceList;
 
 
-
-
     function createInvoice(address clientAddress, uint256 amount, uint256 deadline, string memory termsAndConditions, string memory paymentterm) public {
      uint256 invoiceId = invoiceCounter+1;
      Invoice storage _invoice = invoice[invoiceId];
