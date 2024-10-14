@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import ".InvoiceContract.sol";
+import "./InvoiceContract.sol";
 
 contract PayNVoiceFactory {
 
