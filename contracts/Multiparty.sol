@@ -35,11 +35,9 @@ mapping(uint256 partyMemberId => address partyMemberAddress)  public partyMember
   mapping(address => uint256) public totalMultiPartySystemCreated;
   mapping(address => mapping(uint256 => string)) milestoneDescr;
 
-  address multipartyCreator;
-  address multipartyCreatorBalance;
-  address erc20TokenAddress;
-
-  address public multipartyCreator
+  address public multipartyCreator;
+  address public multipartyCreatorBalance;
+  address public erc20TokenAddress;
 
   error ADDRESS_ZERO_NOT_PERMITED();
   error NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();
@@ -51,7 +49,6 @@ mapping(uint256 partyMemberId => address partyMemberAddress)  public partyMember
   error INVALID_MILESTONE_VALUE(uint256 milestone);
 
   event MultiPartyCreatedSuccessfully(address indexed whoCreates);
-  // event Deposited
 
   constructor(){
     if(msg.sender == address(0)){
@@ -127,7 +124,7 @@ mapping(uint256 partyMemberId => address partyMemberAddress)  public partyMember
 
 /*Release Payment*/
 function releasePayment(uint256 partyMemberId, uint256 milestoneIndex, uint256 milestone1Payment, uint256 milestone2Payment, uint256 milestone3Payment) external {
-    // Ensure that the milestone is completed before releasing payment
+    // We will ensure that the milestone is completed before releasing payment
     // We assume that there is a mapping to track milestone completion for each party member
     
     if (milestoneIndex == 1 && Milestone1.COMPLETED == Milestone1.COMPLETED) {
