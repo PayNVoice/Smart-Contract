@@ -1,8 +1,7 @@
-// //SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
 
-// pragma solidity ^0.8.24;
-
-// import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract PayNVoice {
     address public invoiceCreator;
@@ -67,7 +66,7 @@ contract PayNVoice {
     function addMilestone(
         uint256 _invoiceId,
         string memory _description,
-        uint256 _amount
+        uint256 _amount,
         uint256 _deadline
     ) public {
         Invoice storage invoice = invoices[invoiceCreator][_invoiceId];
@@ -75,7 +74,7 @@ contract PayNVoice {
             description: _description,
             amount: _amount,
             status: Status.pending,
-            isPaid: false
+            isPaid: false,
             deadline: _deadline
         }));
         emit MilestoneAdded(_invoiceId, _description, _amount);
@@ -252,78 +251,65 @@ contract PayNVoice {
         }
 
         return clientInvoices;
-}
+    }
+
 
 
 // the person who deposited into our escrow is doing this
-function confirmPaymentRelease(uint256 invoiceId) public {
-    if(msg.sender == address(0)){
-        revert ADDRESS_ZERO_NOT_PERMITED();
-    }
-
-    Invoice storage invoice = invoices[invoiceCreator][invoiceId];
-
-    if(msg.sender != invoice.clientAddress){
-        revert NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();
-    }
-    if(invoice.amount == 0){
-        revert CANT_INITIATE_RELEASE();
-    }
-
-    uint256 milestoneLength = invoice.milestones.length;
-
-    for(uint256 counter = 0; counter < milestoneLength; counter++){
-        if(invoice.milestones[counter].isPaid == false){
-
-            //here is when both parties have fulfilled what was in agreement
-            if(block.timestamp <= invoice.milestones[counter].deadline && block.timestamp <= invoice.deadline && invoice.milestones[counter].status == Status.confirmed){
-                invoice.milestones[counter].isPaid == true;
-                IERC20(erc20TokenAddress).transferFrom(address(this), invoice.clientAddress, invoice.milestones[counter].amount);
-                break;
-            } 
-
-            //Here is when client pays past the deadline of Invoice issuance
-
-            if(block.timestamp <= invoice.milestones[counter].deadline && block.timestamp > invoice.deadline && invoice.milestones[counter].status == Status.confirmed){
-
-              uint256 lateFee = calculateLateFee(invoiceId);
-              uint256 amountToBeRealeased = invoice.amount + lateFee;
-
-              require(userTokenBal >= amountToBeRealeased, "Insufficient balance for amount and late fee");
-              invoice.isPaid = true;
-
-              IERC20(erc20TokenAddress).transferFrom(address(this), invoice.clientAddress, amountToBeRealeased);
-            }
-
-            //Here is when the Supplier delivers past the milestone deadline
-
-            if(block.timestamp > invoice.milestones[counter].deadline && invoice.milestones[counter].status == Status.confirmed){
-                lateFee =  calculateLateFeeForSupplier(invoiceId, invoice.milestones[counter])
-                uint256 amountToBeRealeased = invoice.milestones[counter].amount - lateFee;
-
-                invoice.milestones[counter].isPaid == true;
-                IERC20(erc20TokenAddress).transfer(address(this), invoice.clientAddress, amountToBeRealeased);
-                break;
-            } 
+    function confirmPaymentRelease(uint256 invoiceId) public {
+        if(msg.sender == address(0)){
+            revert ADDRESS_ZERO_NOT_PERMITED();
         }
+
+        Invoice storage invoice = invoices[invoiceCreator][invoiceId];
+
+        if(msg.sender != invoice.clientAddress){
+            revert NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();
+        }
+        if(invoice.amount == 0){
+            revert CANT_INITIATE_RELEASE();
+        }
+
+        uint256 milestoneLength = invoice.milestones.length;
+        uint256 userTokenBal = IERC20(erc20TokenAddress).balanceOf(msg.sender);
+
+
+        for(uint256 counter = 0; counter < milestoneLength; counter++){
+            if(invoice.milestones[counter].isPaid == false){
+
+                //here is when both parties have fulfilled what was in agreement
+                if(block.timestamp <= invoice.milestones[counter].deadline && block.timestamp <= invoice.deadline && invoice.milestones[counter].status == Status.confirmed){
+                    invoice.milestones[counter].isPaid == true;
+                    IERC20(erc20TokenAddress).transferFrom(address(this), invoice.clientAddress, invoice.milestones[counter].amount);
+                    break;
+                } 
+
+                //Here is when client pays past the deadline of Invoice issuance
+
+                if(block.timestamp <= invoice.milestones[counter].deadline && block.timestamp > invoice.deadline && invoice.milestones[counter].status == Status.confirmed){
+
+                uint256 lateFee = calculateLateFee(invoiceId);
+                uint256 amountToBeRealeased = invoice.amount + lateFee;
+
+                require(userTokenBal >= amountToBeRealeased, "Insufficient balance for amount and late fee");
+                invoice.isPaid = true;
+
+                IERC20(erc20TokenAddress).transferFrom(address(this), invoice.clientAddress, amountToBeRealeased);
+                }
+
+                //Here is when the Supplier delivers past the milestone deadline
+
+                if(block.timestamp > invoice.milestones[counter].deadline && invoice.milestones[counter].status == Status.confirmed){
+                    uint256 lateFee =  calculateLateFeeForSupplier(invoiceId, counter);
+                    uint256 amountToBeRealeased = invoice.milestones[counter].amount - lateFee;
+
+                    invoice.milestones[counter].isPaid == true;
+                    IERC20(erc20TokenAddress).transferFrom(address(this), invoice.clientAddress, amountToBeRealeased);
+                    break;
+                } 
+            }
+        }
+
+    
     }
-
-    // if(invoice.isPaid == true){
-    //     revert PAYMENT_HAS_BEEN_MADE();
-    // }
-
-    // delete invoices[invoiceCreator][invoiceId];
-}
-
-// function requestForPaymentRelease(uint256 invoiceId, uint256 milestone) external{
-//     if(msg.sender == address(0)){
-//         revert ADDRESS_ZERO_NOT_PERMITTED();
-//     }
-
-//     if(msg.sender )
-//     invoices[invoiceCreator][invoiceId];
-//     if()
-// }
-
-
 }
