@@ -192,7 +192,6 @@ contract PayNVoice {
                 count++;
             }
         }
-
         Invoice[] memory clientInvoices = new Invoice[](count);
         uint256 index = 0;
         for (uint256 i = 1; i <= invoiceCounter; i++) {
@@ -200,10 +199,12 @@ contract PayNVoice {
                 clientInvoices[index] = invoices[invoiceCreator][i];
                 index++;
             }
+
         }
 
         return clientInvoices;
 }
+
 
 // the person who deposited into our escrow is doing this
 function confirmPaymentRelease(uint256 invoiceId) public {
