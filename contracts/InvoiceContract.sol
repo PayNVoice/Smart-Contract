@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 contract PayNVoice {
+
 
     address public invoiceCreator;
     address public erc20TokenAddress;
@@ -48,6 +51,7 @@ contract PayNVoice {
     error NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();
     error CANT_INITIATE_RELEASE();
     error PAYMENT_HAS_NOT_BEEN_MADE();
+    error INVOICE_NOT_FOR_YOU();
 
     event InvoiceCreatedSuccessfully(address indexed whocreates, address indexed createFor, uint256 amount, uint256 id);
     event InvoiceReturnedSuccessfully(address indexed forwho, uint256 invoiceId);
@@ -96,7 +100,10 @@ contract PayNVoice {
 
 
     function depositToEscrow(uint256 invoiceId) external payable {
-        require(invoices[invoiceCreator][invoiceId].clientAddress == msg.sender, "This invoice Not for you");
+        Invoice storage invoice = invoices[invoiceCreator][invoiceId];
+        if(invoice.clientAddress != msg.sender){
+            revert INVOICE_NOT_FOR_YOU();
+        }
         
         uint256 userTokenBal = IERC20(erc20TokenAddress).balanceOf(msg.sender);
         require(userTokenBal >= invoices[invoiceCreator][invoiceId].amount, "Insufficient balance");
@@ -120,7 +127,7 @@ contract PayNVoice {
         emit MilestoneAdded(_invoiceId, _description, _amount);
     }
 
-     function markMilestoneCompleted(uint256 _invoiceId, uint256 _milestoneIndex) public {
+    function markMilestoneCompleted(uint256 _invoiceId, uint256 _milestoneIndex) public {
         
         Invoice storage invoice = invoices[invoiceCreator][_invoiceId];
         require(_milestoneIndex < invoice.milestones.length, "Invalid milestone index");
@@ -131,16 +138,13 @@ contract PayNVoice {
         emit MilestoneCompleted(_invoiceId, _milestoneIndex);
     }
 
-
-
-     function getMilestones(uint256 invoiceId) external view returns (Milestone[] memory) {
+    function getMilestones(uint256 invoiceId) external view returns (Milestone[] memory) {
         return invoices[invoiceCreator][invoiceId].milestones;
     }
 
     function getInvoiceCount(address user) private view returns (uint256) {
         return invoiceCount[user];
     }
-
 
     function generateAllInvoice() external view returns (Invoice[] memory) {
         if(msg.sender == address(0)){
