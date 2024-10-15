@@ -2,10 +2,15 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./library/PriceConverter.sol";
 
 contract PayNVoice {
+    using PriceConverter for uint256; 
+
     address public invoiceCreator;
     address public erc20TokenAddress;
+    uint8 penaltyRate = 5;
+    
 
     struct Invoice{
        address clientAddress;
@@ -33,16 +38,16 @@ contract PayNVoice {
 
     constructor(address _erc20TokenAddress){
         if(msg.sender == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
+            revert ADDRESS_ZERO_NOT_PERMITTED();
         }
         if(_erc20TokenAddress == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
+            revert ADDRESS_ZERO_NOT_PERMITTED();
         }
         invoiceCreator = msg.sender;
         erc20TokenAddress = _erc20TokenAddress;
     }
 
-    error ADDRESS_ZERO_NOT_PERMITED();
+    error ADDRESS_ZERO_NOT_PERMITTED();
     error INVOICE_NOT_GENERATED_YET();
     error YOU_DID_NOT_DEPLOY_THIS_CONTRACT();
     error INVOICE_DOES_NOT_EXIST();
@@ -50,6 +55,7 @@ contract PayNVoice {
     error CANT_INITIATE_RELEASE();
     error PAYMENT_HAS_BEEN_MADE();
     error INVOICE_NOT_FOR_YOU();
+    error INSUFFICIENT_AMOUNT_INPUTTED();
 
     event InvoiceCreatedSuccessfully(address indexed whocreates, address indexed createFor, uint256 amount, uint256 id);
     event InvoiceReturnedSuccessfully(address indexed forwho, uint256 invoiceId);
@@ -86,17 +92,20 @@ contract PayNVoice {
         emit MilestoneCompleted(_invoiceId, _milestoneIndex);
     }
 
-    function createInvoice(address clientAddress, uint256 amount, uint256 deadline, string memory termsAndConditions, string memory paymentTerm) public returns(uint256 invoiceId_) {
+    function createInvoice(address clientAddress, uint256 ethAmount, uint256 deadline, string memory termsAndConditions, string memory paymentTerm) public returns(uint256 invoiceId_) {
         if(msg.sender == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
+            revert ADDRESS_ZERO_NOT_PERMITTED();
         }
         if(msg.sender != invoiceCreator){
             revert YOU_DID_NOT_DEPLOY_THIS_CONTRACT();
         }
+        uint256 usdAmount = ethAmount.getConversionRate();
+
         invoiceId_ = invoiceCounter;
+        
         Invoice storage _invoice = invoices[invoiceCreator][invoiceId_];
         _invoice.clientAddress = clientAddress;
-        _invoice.amount = amount;
+        _invoice.amount = usdAmount;
         _invoice.deadline = deadline;
         _invoice.termsAndConditions = termsAndConditions;
         _invoice.paymentterm = paymentTerm;
@@ -105,12 +114,12 @@ contract PayNVoice {
         invoiceCount[msg.sender]++;
         invoiceCounter++;
 
-        emit InvoiceCreatedSuccessfully(msg.sender, clientAddress, amount, invoiceId_);
+        emit InvoiceCreatedSuccessfully(msg.sender, clientAddress, ethAmount, invoiceId_);
     }
 
     function acceptInvoice(uint256 _invoiceId) external{
         if(msg.sender == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
+            revert ADDRESS_ZERO_NOT_PERMITTED();
         }
         Invoice storage invoice = invoices[invoiceCreator][_invoiceId];
         if(invoice.clientAddress != msg.sender){
@@ -122,17 +131,28 @@ contract PayNVoice {
     }
 
 
-    function depositToEscrow(uint256 invoiceId) external payable {
+    function depositToEscrow(uint256 invoiceId, uint256 ethAmount) external {
+        if(msg.sender == address(0)){
+            revert ADDRESS_ZERO_NOT_PERMITTED();
+        }
         Invoice storage invoice = invoices[invoiceCreator][invoiceId];
-        if(invoice.clientAddress != msg.sender){
+        if(msg.sender != invoice.clientAddress){
             revert INVOICE_NOT_FOR_YOU();
         }
+        uint256 amountSpecifiedByInvoiceCreator = invoices[invoiceCreator][invoiceId].amount;
+
+        if(ethAmount <= amountSpecifiedByInvoiceCreator){
+            revert INSUFFICIENT_AMOUNT_INPUTTED();
+        }
         
+        uint256 usdAmount = ethAmount.getConversionRate();
+
         uint256 userTokenBal = IERC20(erc20TokenAddress).balanceOf(msg.sender);
-        require(userTokenBal >= invoices[invoiceCreator][invoiceId].amount, "Insufficient balance");
+        uint256 userTokenBalInUSD = userTokenBal.getConversionRate();
+        require(userTokenBalInUSD > usdAmount, "Insufficient balance");
         invoices[invoiceCreator][invoiceId].isPaid = true;
         
-        IERC20(erc20TokenAddress).transferFrom(msg.sender, address(this), invoices[invoiceCreator][invoiceId].amount);
+        IERC20(erc20TokenAddress).transferFrom(msg.sender, address(this), ethAmount);
     }
 
     function getMilestones(uint256 invoiceId) external view returns (Milestone[] memory) {
@@ -145,7 +165,7 @@ contract PayNVoice {
 
     function generateAllInvoice() external view returns (Invoice[] memory) {
         if(msg.sender == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
+            revert ADDRESS_ZERO_NOT_PERMITTED();
         } 
         Invoice[] memory inv;
         if(msg.sender == invoiceCreator){
@@ -176,7 +196,7 @@ contract PayNVoice {
     /*Client get a particular invoice*/
     function getInvoice(uint256 invoiceId) external returns (Invoice memory invoice1_) {
         if(msg.sender == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
+            revert ADDRESS_ZERO_NOT_PERMITTED();
         }
         invoice1_ = invoices[invoiceCreator][invoiceId];
 
@@ -209,7 +229,7 @@ contract PayNVoice {
 // the person who deposited into our escrow is doing this
 function confirmPaymentRelease(uint256 invoiceId) public {
     if(msg.sender == address(0)){
-        revert ADDRESS_ZERO_NOT_PERMITED();
+        revert ADDRESS_ZERO_NOT_PERMITTED();
     }
 
     Invoice storage invoice = invoices[invoiceCreator][invoiceId];
