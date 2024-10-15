@@ -4,8 +4,6 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract PayNVoice {
-
-
     address public invoiceCreator;
     address public erc20TokenAddress;
 
@@ -50,7 +48,7 @@ contract PayNVoice {
     error INVOICE_DOES_NOT_EXIST();
     error NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();
     error CANT_INITIATE_RELEASE();
-    error PAYMENT_HAS_NOT_BEEN_MADE();
+    error PAYMENT_HAS_BEEN_MADE();
     error INVOICE_NOT_FOR_YOU();
 
     event InvoiceCreatedSuccessfully(address indexed whocreates, address indexed createFor, uint256 amount, uint256 id);
@@ -62,6 +60,31 @@ contract PayNVoice {
     mapping(address => mapping(uint256 => Invoice)) public invoices;
     mapping(address => uint256) public invoiceCount;
     uint256 invoiceCounter = 1;
+
+    function addMilestone(
+        uint256 _invoiceId,
+        string memory _description,
+        uint256 _amount
+    ) public {
+        Invoice storage invoice = invoices[invoiceCreator][_invoiceId];
+        invoice.milestones.push(Milestone({
+            description: _description,
+            amount: _amount,
+            status: Status.pending,
+            isPaid: false
+        }));
+        emit MilestoneAdded(_invoiceId, _description, _amount);
+    }
+
+    function markMilestoneCompleted(uint256 _invoiceId, uint256 _milestoneIndex) public {   
+        Invoice storage invoice = invoices[invoiceCreator][_invoiceId];
+        require(_milestoneIndex < invoice.milestones.length, "Invalid milestone index");
+
+        Milestone storage milestone = invoice.milestones[_milestoneIndex];
+        milestone.status = Status.isCompleted;
+
+        emit MilestoneCompleted(_invoiceId, _milestoneIndex);
+    }
 
     function createInvoice(address clientAddress, uint256 amount, uint256 deadline, string memory termsAndConditions, string memory paymentTerm) public returns(uint256 invoiceId_) {
         if(msg.sender == address(0)){
@@ -110,32 +133,6 @@ contract PayNVoice {
         invoices[invoiceCreator][invoiceId].isPaid = true;
         
         IERC20(erc20TokenAddress).transferFrom(msg.sender, address(this), invoices[invoiceCreator][invoiceId].amount);
-    }
-
-    function addMilestone(
-        uint256 _invoiceId,
-        string memory _description,
-        uint256 _amount
-    ) public {
-        Invoice storage invoice = invoices[invoiceCreator][_invoiceId];
-        invoice.milestones.push(Milestone({
-            description: _description,
-            amount: _amount,
-            status: Status.pending,
-            isPaid: false
-        }));
-        emit MilestoneAdded(_invoiceId, _description, _amount);
-    }
-
-    function markMilestoneCompleted(uint256 _invoiceId, uint256 _milestoneIndex) public {
-        
-        Invoice storage invoice = invoices[invoiceCreator][_invoiceId];
-        require(_milestoneIndex < invoice.milestones.length, "Invalid milestone index");
-
-        Milestone storage milestone = invoice.milestones[_milestoneIndex];
-        milestone.status = Status.isCompleted;
-
-        emit MilestoneCompleted(_invoiceId, _milestoneIndex);
     }
 
     function getMilestones(uint256 invoiceId) external view returns (Milestone[] memory) {
@@ -209,7 +206,7 @@ contract PayNVoice {
 }
 
 // the person who deposited into our escrow is doing this
-function releasePayment(uint256 invoiceId) external {
+function confirmPaymentRelease(uint256 invoiceId) public {
     if(msg.sender == address(0)){
         revert ADDRESS_ZERO_NOT_PERMITED();
     }
@@ -222,14 +219,33 @@ function releasePayment(uint256 invoiceId) external {
     if(invoice.amount == 0){
         revert CANT_INITIATE_RELEASE();
     }
-    if(invoice.isPaid == false){
-        revert PAYMENT_HAS_NOT_BEEN_MADE();
+    uint256 milestoneLength = invoice.milestones.length;
+    for(uint256 counter = 0; counter < milestoneLength; counter++){
+        if(invoice.milestones[counter].isPaid == false){
+            if(invoice.milestones[counter].status == Status.confirmed){
+                IERC20(erc20TokenAddress).transfer(invoices[invoiceCreator][invoiceId].clientAddress, invoices[invoiceCreator][invoiceId].milestones[counter].amount);
+                invoice.milestones[counter].isPaid == true;
+                break;
+            }  
+        }
     }
-     
-    IERC20(erc20TokenAddress).transfer(invoices[invoiceCreator][invoiceId].clientAddress, invoices[invoiceCreator][invoiceId].amount);
-    
-    delete invoices[invoiceCreator][invoiceId];
+
+    // if(invoice.isPaid == true){
+    //     revert PAYMENT_HAS_BEEN_MADE();
+    // }
+
+    // delete invoices[invoiceCreator][invoiceId];
 }
+
+// function requestForPaymentRelease(uint256 invoiceId, uint256 milestone) external{
+//     if(msg.sender == address(0)){
+//         revert ADDRESS_ZERO_NOT_PERMITTED();
+//     }
+
+//     if(msg.sender )
+//     invoices[invoiceCreator][invoiceId];
+//     if()
+// }
 
 
 }
