@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
-
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+// contract Multiparty {
 
 contract PayNVoice {
     address public invoiceCreator;
@@ -40,7 +41,7 @@ contract PayNVoice {
         if(_erc20TokenAddress == address(0)){
             revert ADDRESS_ZERO_NOT_PERMITED();
         }
-        invoiceCreator = msg.sender;
+        // invoiceCreator = msg.sender;
         erc20TokenAddress = _erc20TokenAddress;
     }
 
@@ -53,7 +54,7 @@ contract PayNVoice {
     error PAYMENT_HAS_BEEN_MADE();
     error INVOICE_NOT_FOR_YOU();
 
-    event InvoiceCreatedSuccessfully(address indexed whocreates, address indexed createFor, uint256 amount, uint256 id);
+    event InvoiceCreatedSuccessfully(address indexed whocreates, address indexed createFor, uint256 amount, uint256 indexed id);
     event InvoiceReturnedSuccessfully(address indexed forwho, uint256 indexed invoiceId);
     event MilestoneAdded(uint256 indexed invoiceId, string indexed description, uint256 indexed amount);
     event MilestoneCompleted(uint256 indexed invoiceId, uint256 indexed milestoneIndex);
