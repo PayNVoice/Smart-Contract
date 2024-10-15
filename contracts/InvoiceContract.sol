@@ -62,7 +62,7 @@ contract PayNVoice {
     event MilestoneAdded(uint256 indexed invoiceId, string description, uint256 amount);
     event MilestoneCompleted(uint256 indexed invoiceId, uint256 milestoneIndex);
     event InvoiceAcceptedSuccessfully(address indexed forWho, uint256 invoiceId);
-
+    event ReceiptGenerated(uint256 milestone, address indexed forWho, uint256 amount);
     mapping(address => mapping(uint256 => Invoice)) public invoices;
     mapping(address => uint256) public invoiceCount;
     uint256 invoiceCounter = 1;
@@ -190,7 +190,7 @@ contract PayNVoice {
             for(uint256 count = 1; count<=invoiceCou; count++){
                 invoiceList[count - 1] = invoices[msg.sender][count];
             }
-            return invoiceList;
+        return invoiceList;
     }
 
     /*Client get a particular invoice*/
@@ -201,7 +201,6 @@ contract PayNVoice {
         invoice1_ = invoices[invoiceCreator][invoiceId];
 
         emit InvoiceReturnedSuccessfully(msg.sender, invoiceId);
-
     }
 
     // get all invoices for a particular client
@@ -219,12 +218,9 @@ contract PayNVoice {
                 clientInvoices[index] = invoices[invoiceCreator][i];
                 index++;
             }
-
         }
-
         return clientInvoices;
-}
-
+    }
 
 // the person who deposited into our escrow is doing this
 function confirmPaymentRelease(uint256 invoiceId) public {
@@ -245,7 +241,8 @@ function confirmPaymentRelease(uint256 invoiceId) public {
         if(invoice.milestones[counter].isPaid == false){
             if(invoice.milestones[counter].status == Status.confirmed){
                 IERC20(erc20TokenAddress).transfer(invoices[invoiceCreator][invoiceId].clientAddress, invoices[invoiceCreator][invoiceId].milestones[counter].amount);
-                invoice.milestones[counter].isPaid == true;
+                invoice.milestones[counter].isPaid = true;
+                generateReceipt(counter, invoice.clientAddress, invoice.milestones[counter].amount);
                 break;
             }  
         }
@@ -256,6 +253,15 @@ function confirmPaymentRelease(uint256 invoiceId) public {
     // }
 
     // delete invoices[invoiceCreator][invoiceId];
+}
+
+function generateReceipt(uint256 milestone, address clientAddress, uint256 usdAmount) public{
+    emit ReceiptGenerated(
+        milestone,
+        clientAddress,
+        usdAmount
+    );
+        
 }
 
 // function requestForPaymentRelease(uint256 invoiceId, uint256 milestone) external{
