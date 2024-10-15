@@ -138,8 +138,26 @@ contract PayNVoice {
         }
     }
 
+     // Add Late Fee Penalty Calculation on Supplier
+    function calculateLateFeeForSupplier(uint256 invoiceId, uint256 milestoneIndex) public view returns (uint256) {
+
+        Invoice storage invoice = invoices[invoiceCreator][invoiceId];
+        require(milestoneIndex < invoice.milestones.length, "Invalid milestone index");
+
+        Milestone storage milestone = invoice.milestones[milestoneIndex]; 
+
+        if (block.timestamp > milestone.deadline) {
+            uint256 daysLate = (block.timestamp - invoice.deadline) / (24*60*60);
+            uint256 lateFee = (invoice.amount * invoice.lateFeeRate * daysLate) / 100;
+            return lateFee;
+        } else {
+            return 0;
+        }
+    }
+
 
     function depositToEscrow(uint256 invoiceId) external payable {
+
         Invoice storage invoice = invoices[invoiceCreator][invoiceId];
         if(invoice.clientAddress != msg.sender){
             revert INVOICE_NOT_FOR_YOU();
@@ -149,17 +167,19 @@ contract PayNVoice {
 
       //apply penalty on the client if the pay past the invoice deadline
         if(block.timestamp > invoice.deadline){
-           uint256 lateFee = calculateLateFee(invoice.amount, invoice.deadline);
 
-           require(userTokenBal >= invoice.amount + lateFee, "Insufficient balance for amount and late fee");
-           invoices[invoiceCreator][invoiceId].isPaid = true;
+           uint256 lateFee = calculateLateFee(invoiceId);
+           uint256 amountToDeposit = invoice.amount + lateFee;
 
-           IERC20(erc20TokenAddress).transferFrom(msg.sender, address(this), invoice.amount + lateFee);
+           require(userTokenBal >= amountToDeposit, "Insufficient balance for amount and late fee");
+           invoice.isPaid = true;
+
+           IERC20(erc20TokenAddress).transferFrom(msg.sender, address(this), amountToDeposit);
         }else{
-            require(userTokenBal >= invoices[invoiceCreator][invoiceId].amount, "Insufficient balance");
-            invoices[invoiceCreator][invoiceId].isPaid = true;
+            require(userTokenBal >= invoice.amount, "Insufficient balance");
+            invoice.isPaid = true;
         
-            IERC20(erc20TokenAddress).transferFrom(msg.sender, address(this), invoices[invoiceCreator][invoiceId].amount);
+            IERC20(erc20TokenAddress).transferFrom(msg.sender, address(this), invoice.amount);
         }
     }
 
@@ -248,14 +268,42 @@ function confirmPaymentRelease(uint256 invoiceId) public {
     if(invoice.amount == 0){
         revert CANT_INITIATE_RELEASE();
     }
+
     uint256 milestoneLength = invoice.milestones.length;
+
     for(uint256 counter = 0; counter < milestoneLength; counter++){
         if(invoice.milestones[counter].isPaid == false){
-            if(invoice.milestones[counter].status == Status.confirmed){
-                IERC20(erc20TokenAddress).transfer(invoices[invoiceCreator][invoiceId].clientAddress, invoices[invoiceCreator][invoiceId].milestones[counter].amount);
+
+            //here is when both parties have fulfilled what was in agreement
+            if(block.timestamp <= invoice.milestones[counter].deadline && block.timestamp <= invoice.deadline && invoice.milestones[counter].status == Status.confirmed){
                 invoice.milestones[counter].isPaid == true;
+                IERC20(erc20TokenAddress).transferFrom(address(this), invoice.clientAddress, invoice.milestones[counter].amount);
                 break;
-            }  
+            } 
+
+            //Here is when client pays past the deadline of Invoice issuance
+
+            if(block.timestamp <= invoice.milestones[counter].deadline && block.timestamp > invoice.deadline && invoice.milestones[counter].status == Status.confirmed){
+
+              uint256 lateFee = calculateLateFee(invoiceId);
+              uint256 amountToBeRealeased = invoice.amount + lateFee;
+
+              require(userTokenBal >= amountToBeRealeased, "Insufficient balance for amount and late fee");
+              invoice.isPaid = true;
+
+              IERC20(erc20TokenAddress).transferFrom(address(this), invoice.clientAddress, amountToBeRealeased);
+            }
+
+            //Here is when the Supplier delivers past the milestone deadline
+
+            if(block.timestamp > invoice.milestones[counter].deadline && invoice.milestones[counter].status == Status.confirmed){
+                lateFee =  calculateLateFeeForSupplier(invoiceId, invoice.milestones[counter])
+                uint256 amountToBeRealeased = invoice.milestones[counter].amount - lateFee;
+
+                invoice.milestones[counter].isPaid == true;
+                IERC20(erc20TokenAddress).transfer(address(this), invoice.clientAddress, amountToBeRealeased);
+                break;
+            } 
         }
     }
 
