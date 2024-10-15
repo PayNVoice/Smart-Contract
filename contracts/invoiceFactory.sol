@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
@@ -6,7 +5,7 @@ import "./InvoiceContract.sol";
 
 contract PayNVoiceFactory {
 
-    PayNVoice[] invoiceClones;
+    PayNVoice[] public invoiceClones;
 
     function createInvoice(address tokAddress) external returns (PayNVoice newInvoice_, uint256 length_) {
 
