@@ -8,9 +8,9 @@ contract PayNVoiceFactory {
 
     PayNVoice[] invoiceClones;
 
-    function createInvoice() external returns (PayNVoice newInvoice_, uint256 length_) {
+    function createInvoice(address tokAddress) external returns (PayNVoice newInvoice_, uint256 length_) {
 
-        newInvoice_ = new PayNVoice();
+        newInvoice_ = new PayNVoice(tokAddress);
 
         invoiceClones.push(newInvoice_);
 
