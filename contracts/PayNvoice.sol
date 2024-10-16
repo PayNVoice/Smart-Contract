@@ -10,6 +10,7 @@ contract PayNVoice {
 
     struct Invoice{
        address clientAddress;
+       address invoiceCreator;
        uint256 amount;
        uint256 deadline;
        string termsAndConditions;
@@ -23,7 +24,8 @@ contract PayNVoice {
     enum Status{
         pending,
         isCompleted,
-        confirmed
+        confirmed,
+        customerConfirmed
     }
 
     struct Milestone {
@@ -64,13 +66,39 @@ contract PayNVoice {
     mapping(address => uint256) public invoiceCount;
     uint256 invoiceCounter = 1;
 
-    function addMilestone(
+
+
+    function createInvoice(address clientAddress, uint256 amount, uint256 deadline, string memory termsAndConditions, string memory paymentTerm) public returns(uint256 invoiceId_) {
+        if(msg.sender == address(0)){
+            revert ADDRESS_ZERO_NOT_PERMITED();
+        }
+        // if(msg.sender != invoiceCreator){
+        //     revert YOU_DID_NOT_DEPLOY_THIS_CONTRACT();
+        // }
+        invoiceId_ = invoiceCounter;
+        Invoice storage _invoice = invoices[msg.sender][invoiceId_];
+        _invoice.invoiceCreator = msg.sender;
+        _invoice.clientAddress = clientAddress;
+        _invoice.amount = amount;
+        _invoice.deadline = deadline;
+        _invoice.termsAndConditions = termsAndConditions;
+        _invoice.paymentterm = paymentTerm;
+        
+        invoices[msg.sender][invoiceId_] = _invoice;
+        invoiceCount[msg.sender]++;
+        invoiceCounter++;
+        invoiceCreator=msg.sender;
+
+        emit InvoiceCreatedSuccessfully(msg.sender, clientAddress, amount, invoiceId_);
+    }
+
+     function addMilestone(
         uint256 _invoiceId,
         string memory _description,
         uint256 _amount,
         uint256 _deadline
     ) public {
-        Invoice storage invoice = invoices[invoiceCreator][_invoiceId];
+        Invoice storage invoice = invoices[msg.sender][_invoiceId];
         invoice.milestones.push(Milestone({
             description: _description,
             amount: _amount,
@@ -81,8 +109,10 @@ contract PayNVoice {
         emit MilestoneAdded(_invoiceId, _description, _amount);
     }
 
+    //invoicecreator marking the milstone complete
+
     function markMilestoneCompleted(uint256 _invoiceId, uint256 _milestoneIndex) public {   
-        Invoice storage invoice = invoices[invoiceCreator][_invoiceId];
+        Invoice storage invoice = invoices[msg.sender][_invoiceId];
         require(_milestoneIndex < invoice.milestones.length, "Invalid milestone index");
 
         Milestone storage milestone = invoice.milestones[_milestoneIndex];
@@ -92,29 +122,7 @@ contract PayNVoice {
     }
 
 
-    function createInvoice(address clientAddress, uint256 amount, uint256 deadline, string memory termsAndConditions, string memory paymentTerm) public returns(uint256 invoiceId_) {
-        if(msg.sender == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
-        }
-        if(msg.sender != invoiceCreator){
-            revert YOU_DID_NOT_DEPLOY_THIS_CONTRACT();
-        }
-        invoiceId_ = invoiceCounter;
-        Invoice storage _invoice = invoices[invoiceCreator][invoiceId_];
-        _invoice.clientAddress = clientAddress;
-        _invoice.amount = amount;
-        _invoice.deadline = deadline;
-        _invoice.termsAndConditions = termsAndConditions;
-        _invoice.paymentterm = paymentTerm;
-        
-        invoices[msg.sender][invoiceId_] = _invoice;
-        invoiceCount[msg.sender]++;
-        invoiceCounter++;
-
-        emit InvoiceCreatedSuccessfully(msg.sender, clientAddress, amount, invoiceId_);
-    }
-
-    function acceptInvoice(uint256 _invoiceId) external{
+    function acceptInvoice(uint256 _invoiceId, uint256 _milestoneIndex) external{
         if(msg.sender == address(0)){
             revert ADDRESS_ZERO_NOT_PERMITED();
         }
@@ -122,6 +130,10 @@ contract PayNVoice {
         if(invoice.clientAddress != msg.sender){
             revert INVOICE_DOES_NOT_EXIST();
         }
+
+        Milestone storage milestone = invoice.milestones[_milestoneIndex];
+        
+        require(milestone.status == Status.isCompleted, "Incomplete milestone");
         invoice.hasAccepted = true;
 
         emit InvoiceAcceptedSuccessfully(msg.sender, _invoiceId);
@@ -129,7 +141,7 @@ contract PayNVoice {
 
     // Add Late Fee Penalty Calculation
     function calculateLateFee(uint256 invoiceId) public view returns (uint256) {
-        Invoice storage invoice = invoices[invoiceCreator][invoiceId];
+        Invoice storage invoice = invoices[msg.sender][invoiceId];
         if (block.timestamp > invoice.deadline) {
             uint256 daysLate = (block.timestamp - invoice.deadline) / (24*60*60);
             uint256 lateFee = (invoice.amount * invoice.lateFeeRate * daysLate) / 100;
@@ -142,7 +154,7 @@ contract PayNVoice {
      // Add Late Fee Penalty Calculation on Supplier
     function calculateLateFeeForSupplier(uint256 invoiceId, uint256 milestoneIndex) public view returns (uint256) {
 
-        Invoice storage invoice = invoices[invoiceCreator][invoiceId];
+        Invoice storage invoice = invoices[msg.sender][invoiceId];
         require(milestoneIndex < invoice.milestones.length, "Invalid milestone index");
 
         Milestone storage milestone = invoice.milestones[milestoneIndex]; 
@@ -159,7 +171,7 @@ contract PayNVoice {
 
     function depositToEscrow(uint256 invoiceId) external payable {
 
-        Invoice storage invoice = invoices[invoiceCreator][invoiceId];
+        Invoice storage invoice = invoices[msg.sender][invoiceId];
         if(invoice.clientAddress != msg.sender){
             revert INVOICE_NOT_FOR_YOU();
         }
@@ -177,7 +189,9 @@ contract PayNVoice {
 
            IERC20(erc20TokenAddress).transferFrom(msg.sender, address(this), amountToDeposit);
         }else{
+
             require(userTokenBal >= invoice.amount, "Insufficient balance");
+
             invoice.isPaid = true;
         
             IERC20(erc20TokenAddress).transferFrom(msg.sender, address(this), invoice.amount);
@@ -185,7 +199,7 @@ contract PayNVoice {
     }
 
     function getMilestones(uint256 invoiceId) external view returns (Milestone[] memory) {
-        return invoices[invoiceCreator][invoiceId].milestones;
+        return invoices[msg.sender][invoiceId].milestones;
     }
 
     function getInvoiceCount(address user) private view returns (uint256) {
@@ -223,13 +237,11 @@ contract PayNVoice {
     }
 
     /*Client get a particular invoice*/
-    function getInvoice(uint256 invoiceId) external returns (Invoice memory invoice1_) {
+    function getInvoice(uint256 invoiceId) external view  returns (Invoice memory) {
         if(msg.sender == address(0)){
             revert ADDRESS_ZERO_NOT_PERMITED();
         }
-        invoice1_ = invoices[invoiceCreator][invoiceId];
-
-        emit InvoiceReturnedSuccessfully(msg.sender, invoiceId);
+        return invoices[msg.sender][invoiceId];      
 
     }
 
@@ -262,7 +274,7 @@ contract PayNVoice {
             revert ADDRESS_ZERO_NOT_PERMITED();
         }
 
-        Invoice storage invoice = invoices[invoiceCreator][invoiceId];
+        Invoice storage invoice = invoices[msg.sender][invoiceId];
 
         if(msg.sender != invoice.clientAddress){
             revert NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();
@@ -270,6 +282,8 @@ contract PayNVoice {
         if(invoice.amount == 0){
             revert CANT_INITIATE_RELEASE();
         }
+
+        require(invoice.hasAccepted == true, "Customer has not confirmed yet");
 
         uint256 milestoneLength = invoice.milestones.length;
         uint256 userTokenBal = IERC20(erc20TokenAddress).balanceOf(msg.sender);
