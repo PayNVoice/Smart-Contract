@@ -255,7 +255,7 @@ function confirmPaymentRelease(uint256 invoiceId) public {
     // delete invoices[invoiceCreator][invoiceId];
 }
 
-function generateReceipt(uint256 milestone, address clientAddress, uint256 usdAmount) public{
+function generateReceipt(uint256 milestone, address clientAddress, uint256 usdAmount) private{
     emit ReceiptGenerated(
         milestone,
         clientAddress,
