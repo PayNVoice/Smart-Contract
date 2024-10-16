@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {CustomErrors, Events} from "./library/ErrorsAndEvents.sol";
 
 // contract Multiparty {
 
@@ -38,46 +39,29 @@ contract PayNVoice {
 
     constructor(address _erc20TokenAddress){
         if(msg.sender == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
+            revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         }
         if(_erc20TokenAddress == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
+            revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         }
-        // invoiceCreator = msg.sender;
+        // msg.sender = msg.sender;
         erc20TokenAddress = _erc20TokenAddress;
     }
 
-    error ADDRESS_ZERO_NOT_PERMITED();
-    error INVOICE_NOT_GENERATED_YET();
-    error YOU_DID_NOT_DEPLOY_THIS_CONTRACT();
-    error INVOICE_DOES_NOT_EXIST();
-    error NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();
-    error CANT_INITIATE_RELEASE();
-    error PAYMENT_HAS_BEEN_MADE();
-    error INVOICE_NOT_FOR_YOU();
 
-    event InvoiceCreatedSuccessfully(address indexed whocreates, address indexed createFor, uint256 amount, uint256 indexed id);
-    event InvoiceReturnedSuccessfully(address indexed forwho, uint256 indexed invoiceId);
-    event MilestoneAdded(uint256 indexed invoiceId, string indexed description, uint256 indexed amount);
-    event MilestoneCompleted(uint256 indexed invoiceId, uint256 indexed milestoneIndex);
-    event InvoiceAcceptedSuccessfully(address indexed forWho, uint256 indexed invoiceId);
+
+
 
     mapping(address => mapping(uint256 => Invoice)) public invoices;
     mapping(address => uint256) public invoiceCount;
     uint256 invoiceCounter = 1;
 
-
-
     function createInvoice(address clientAddress, uint256 amount, uint256 deadline, string memory termsAndConditions, string memory paymentTerm) public returns(uint256 invoiceId_) {
         if(msg.sender == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
+            revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         }
-        // if(msg.sender != invoiceCreator){
-        //     revert YOU_DID_NOT_DEPLOY_THIS_CONTRACT();
-        // }
         invoiceId_ = invoiceCounter;
         Invoice storage _invoice = invoices[msg.sender][invoiceId_];
-        _invoice.invoiceCreator = msg.sender;
         _invoice.clientAddress = clientAddress;
         _invoice.amount = amount;
         _invoice.deadline = deadline;
@@ -87,10 +71,10 @@ contract PayNVoice {
         invoices[msg.sender][invoiceId_] = _invoice;
         invoiceCount[msg.sender]++;
         invoiceCounter++;
-        invoiceCreator=msg.sender;
 
-        emit InvoiceCreatedSuccessfully(msg.sender, clientAddress, amount, invoiceId_);
+        emit Events.InvoiceCreatedSuccessfully(msg.sender, clientAddress, amount, invoiceId_);
     }
+
 
      function addMilestone(
         uint256 _invoiceId,
@@ -106,7 +90,7 @@ contract PayNVoice {
             isPaid: false,
             deadline: _deadline
         }));
-        emit MilestoneAdded(_invoiceId, _description, _amount);
+        emit Events.MilestoneAdded(_invoiceId, _description, _amount);
     }
 
     //invoicecreator marking the milstone complete
@@ -118,17 +102,17 @@ contract PayNVoice {
         Milestone storage milestone = invoice.milestones[_milestoneIndex];
         milestone.status = Status.isCompleted;
 
-        emit MilestoneCompleted(_invoiceId, _milestoneIndex);
+        emit Events.MilestoneCompleted(_invoiceId, _milestoneIndex);
     }
 
 
     function acceptInvoice(uint256 _invoiceId, uint256 _milestoneIndex) external{
         if(msg.sender == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
+            revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         }
-        Invoice storage invoice = invoices[invoiceCreator][_invoiceId];
+        Invoice storage invoice = invoices[msg.sender][_invoiceId];
         if(invoice.clientAddress != msg.sender){
-            revert INVOICE_DOES_NOT_EXIST();
+            revert CustomErrors.INVOICE_DOES_NOT_EXIST();
         }
 
         Milestone storage milestone = invoice.milestones[_milestoneIndex];
@@ -136,12 +120,13 @@ contract PayNVoice {
         require(milestone.status == Status.isCompleted, "Incomplete milestone");
         invoice.hasAccepted = true;
 
-        emit InvoiceAcceptedSuccessfully(msg.sender, _invoiceId);
+        emit Events.InvoiceAcceptedSuccessfully(msg.sender, _invoiceId);
     }
 
     // Add Late Fee Penalty Calculation
     function calculateLateFee(uint256 invoiceId) public view returns (uint256) {
         Invoice storage invoice = invoices[msg.sender][invoiceId];
+
         if (block.timestamp > invoice.deadline) {
             uint256 daysLate = (block.timestamp - invoice.deadline) / (24*60*60);
             uint256 lateFee = (invoice.amount * invoice.lateFeeRate * daysLate) / 100;
@@ -155,6 +140,7 @@ contract PayNVoice {
     function calculateLateFeeForSupplier(uint256 invoiceId, uint256 milestoneIndex) public view returns (uint256) {
 
         Invoice storage invoice = invoices[msg.sender][invoiceId];
+       
         require(milestoneIndex < invoice.milestones.length, "Invalid milestone index");
 
         Milestone storage milestone = invoice.milestones[milestoneIndex]; 
@@ -172,8 +158,9 @@ contract PayNVoice {
     function depositToEscrow(uint256 invoiceId) external payable {
 
         Invoice storage invoice = invoices[msg.sender][invoiceId];
+      
         if(invoice.clientAddress != msg.sender){
-            revert INVOICE_NOT_FOR_YOU();
+            revert CustomErrors.INVOICE_NOT_FOR_YOU();
         }
         
         uint256 userTokenBal = IERC20(erc20TokenAddress).balanceOf(msg.sender);
@@ -200,6 +187,7 @@ contract PayNVoice {
 
     function getMilestones(uint256 invoiceId) external view returns (Milestone[] memory) {
         return invoices[msg.sender][invoiceId].milestones;
+       
     }
 
     function getInvoiceCount(address user) private view returns (uint256) {
@@ -208,20 +196,20 @@ contract PayNVoice {
 
     function generateAllInvoice() external view returns (Invoice[] memory) {
         if(msg.sender == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
+            revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         } 
         Invoice[] memory inv;
-        if(msg.sender == invoiceCreator){
+        if(msg.sender == msg.sender){
             uint256 invoiceCounting = getInvoiceCount(msg.sender);
             if(invoiceCounter < 1){
-                revert INVOICE_NOT_GENERATED_YET();
+                revert CustomErrors.INVOICE_NOT_GENERATED_YET();
             }
             inv = returnHelperInvoices(invoiceCounting);
         } else {
             
-            uint256 invoiceCount2 = getInvoiceCount(invoiceCreator);
+            uint256 invoiceCount2 = getInvoiceCount(msg.sender);
             if(invoiceCount2 < 1){
-                revert INVOICE_NOT_GENERATED_YET();
+                revert CustomErrors.INVOICE_NOT_GENERATED_YET();
             }
             inv = returnHelperInvoices(invoiceCount2);
         }
@@ -237,27 +225,29 @@ contract PayNVoice {
     }
 
     /*Client get a particular invoice*/
-    function getInvoice(uint256 invoiceId) external view  returns (Invoice memory) {
+    function getInvoice(uint256 invoiceId) external returns (Invoice memory invoice1_) {
         if(msg.sender == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
+            revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         }
-        return invoices[msg.sender][invoiceId];      
+        invoice1_ = invoices[msg.sender][invoiceId];
+
+        emit Events.InvoiceReturnedSuccessfully(msg.sender, invoiceId);
 
     }
-
+    
     // get all invoices for a particular client
     function getInvoicesForClient(address client) external view returns (Invoice[] memory){
         uint256 count = 0;
         for (uint256 i = 1; i <= invoiceCounter; i++) {
-            if (invoices[invoiceCreator][i].clientAddress == client) {
+            if (invoices[msg.sender][i].clientAddress == client) {
                 count++;
             }
         }
         Invoice[] memory clientInvoices = new Invoice[](count);
         uint256 index = 0;
         for (uint256 i = 1; i <= invoiceCounter; i++) {
-            if (invoices[invoiceCreator][i].clientAddress == client) {
-                clientInvoices[index] = invoices[invoiceCreator][i];
+            if (invoices[msg.sender][i].clientAddress == client) {
+                clientInvoices[index] = invoices[msg.sender][i];
                 index++;
             }
 
@@ -271,16 +261,17 @@ contract PayNVoice {
 // the person who deposited into our escrow is doing this
     function confirmPaymentRelease(uint256 invoiceId) public {
         if(msg.sender == address(0)){
-            revert ADDRESS_ZERO_NOT_PERMITED();
+            revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         }
 
         Invoice storage invoice = invoices[msg.sender][invoiceId];
+      
 
         if(msg.sender != invoice.clientAddress){
-            revert NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();
+            revert CustomErrors.NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();
         }
         if(invoice.amount == 0){
-            revert CANT_INITIATE_RELEASE();
+            revert CustomErrors.CANT_INITIATE_RELEASE();
         }
 
         require(invoice.hasAccepted == true, "Customer has not confirmed yet");
