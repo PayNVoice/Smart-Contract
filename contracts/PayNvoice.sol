@@ -179,27 +179,55 @@ contract PayNVoice {
         return invoiceCount[user];
     }
 
-    function generateAllInvoice() external view returns (Invoice[] memory) {
-        if(msg.sender == address(0)){
-            revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
-        } 
-        Invoice[] memory inv;
-        if(msg.sender == msg.sender){
-            uint256 invoiceCounting = getInvoiceCount(msg.sender);
-            if(invoiceCounter < 1){
-                revert CustomErrors.INVOICE_NOT_GENERATED_YET();
-            }
-            inv = returnHelperInvoices(invoiceCounting);
-        } else {
+    // function generateAllInvoice() external view returns (Invoice[] memory) {
+    //     if(msg.sender == address(0)){
+    //         revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
+    //     } 
+    //     Invoice[] memory inv;
+    //     if(msg.sender == msg.sender){
+    //         uint256 invoiceCounting = getInvoiceCount(msg.sender);
+    //         if(invoiceCounter < 1){
+    //             revert CustomErrors.INVOICE_NOT_GENERATED_YET();
+    //         }
+    //         inv = returnHelperInvoices(invoiceCounting);
+    //     } else {
             
-            uint256 invoiceCount2 = getInvoiceCount(msg.sender);
-            if(invoiceCount2 < 1){
-                revert CustomErrors.INVOICE_NOT_GENERATED_YET();
-            }
-            inv = returnHelperInvoices(invoiceCount2);
+    //         uint256 invoiceCount2 = getInvoiceCount(msg.sender);
+    //         if(invoiceCount2 < 1){
+    //             revert CustomErrors.INVOICE_NOT_GENERATED_YET();
+    //         }
+    //         inv = returnHelperInvoices(invoiceCount2);
+    //     }
+    //     return inv;
+    // }
+
+    function generateAllInvoice() external view returns (Invoice[] memory) {
+    // Get the total number of invoices
+    uint256 totalInvoices = invoiceCounter - 1;
+    uint256 count = 0;
+
+    // First, count how many invoices are relevant to the caller (msg.sender)
+    for (uint256 i = 1; i <= totalInvoices; i++) {
+        if (invoices[invoiceCreator][i].clientAddress == msg.sender || invoiceCreator == msg.sender) {
+            count++;
         }
-        return inv;
     }
+
+    // Create a new array with the exact size
+    Invoice[] memory result = new Invoice[](count);
+    uint256 index = 0;
+
+    // Populate the array with relevant invoices
+    for (uint256 i = 1; i <= totalInvoices; i++) {
+        if (invoices[invoiceCreator][i].clientAddress == msg.sender || invoiceCreator == msg.sender) {
+            result[index] = invoices[invoiceCreator][i];
+            index++;
+        }
+    }
+
+    return result;
+}
+
 
     function returnHelperInvoices(uint256 invoiceCou) private view returns(Invoice[] memory){
         Invoice[] memory invoiceList = new Invoice[](invoiceCou);
