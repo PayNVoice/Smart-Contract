@@ -9,6 +9,7 @@ library CustomErrors{
     error CANT_INITIATE_RELEASE();
     error PAYMENT_HAS_BEEN_MADE();
     error INVOICE_NOT_FOR_YOU();
+    error INVALID_ADDRESS();
 }
 
 library Events{
