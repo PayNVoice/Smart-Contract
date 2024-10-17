@@ -117,7 +117,7 @@ contract PayNVoice {
         if(msg.sender == address(0)){
             revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         }
-        Invoice storage invoice = invoices[msg.sender][_invoiceId];
+        Invoice storage invoice = invoices[invoiceCreator][_invoiceId];
         if(invoice.clientAddress != msg.sender){
             revert CustomErrors.INVOICE_DOES_NOT_EXIST();
         }
@@ -234,28 +234,28 @@ contract PayNVoice {
 
 
     /*Client get a particular invoice*/
-    function getInvoice(uint256 invoiceId) external returns (Invoice memory invoice1_) {
+    function getInvoice(uint256 invoiceId) external view returns (Invoice memory) {
         if(msg.sender == address(0)){
             revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         }
-        invoice1_ = invoices[msg.sender][invoiceId];
+        return invoices[invoiceCreator][invoiceId];
 
-        emit Events.InvoiceReturnedSuccessfully(msg.sender, invoiceId);
+        // emit Events.InvoiceReturnedSuccessfully(msg.sender, invoiceId);
 
     }
 
     // get all invoices for a particular client
-    function getInvoicesForClient(address client) external view returns (Invoice[] memory){
+    function getInvoicesForClient() external view returns (Invoice[] memory){
         uint256 count = 0;
         for (uint256 i = 1; i <= invoiceCounter; i++) {
-            if (invoices[msg.sender][i].clientAddress == client) {
+            require(invoices[invoiceCreator][i].clientAddress==msg.sender, "Enter A valid Address");
                 count++;
-            }
+            
         }
         Invoice[] memory clientInvoices = new Invoice[](count);
         uint256 index = 0;
         for (uint256 i = 1; i <= invoiceCounter; i++) {
-            if (invoices[msg.sender][i].clientAddress == client) {
+            if (invoices[invoiceCreator][i].clientAddress==msg.sender) {
                 clientInvoices[index] = invoices[msg.sender][i];
                 index++;
             }
@@ -273,7 +273,7 @@ contract PayNVoice {
             revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         }
 
-        Invoice storage invoice = invoices[msg.sender][invoiceId];
+        Invoice storage invoice = invoices[invoiceCreator][invoiceId];
 
         if(msg.sender != invoice.clientAddress){
             revert CustomErrors.NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION();

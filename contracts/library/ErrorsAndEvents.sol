@@ -13,7 +13,7 @@ library CustomErrors{
 }
 
 library Events{
-        event InvoiceCreatedSuccessfully(address indexed whocreates, address indexed createFor, uint256 amount, uint256 indexed id);
+    event InvoiceCreatedSuccessfully(address indexed whocreates, address indexed createFor, uint256 amount, uint256 indexed id);
     event InvoiceReturnedSuccessfully(address indexed forwho, uint256 indexed invoiceId);
     event MilestoneAdded(uint256 indexed invoiceId, string indexed description, uint256 indexed amount);
     event MilestoneCompleted(uint256 indexed invoiceId, uint256 indexed milestoneIndex);
