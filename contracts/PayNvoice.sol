@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {CustomErrors, Events} from "./library/ErrorsAndEvents.sol";
+import {CustomErrors, Events} from "./ErrorsAndEvents.sol";
 
 // contract Multiparty {
 
@@ -42,7 +42,7 @@ contract PayNVoice {
         if(_erc20TokenAddress == address(0)){
             revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         }
-        // msg.sender = msg.sender;
+    
         erc20TokenAddress = _erc20TokenAddress;
     }
 
@@ -52,7 +52,7 @@ contract PayNVoice {
 
     mapping(address => mapping(uint256 => Invoice)) public invoices;
     mapping(address => uint256) public invoiceCount;
-    uint256 invoiceCounter = 1;
+    uint256 invoiceCounter;
 
     function addMilestone(
         uint256 _invoiceId,
@@ -86,19 +86,30 @@ contract PayNVoice {
         if(msg.sender == address(0)){
             revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         }
-        invoiceId_ = invoiceCounter;
+
+        if(clientAddress == msg.sender){
+
+            revert CustomErrors.INVALID_ADDRESS();
+        }
+
+        require(clientAddress != msg.sender, "NO" );
+        
+        invoiceId_ = invoiceCounter + 1;
+        
         Invoice storage _invoice = invoices[msg.sender][invoiceId_];
         _invoice.clientAddress = clientAddress;
         _invoice.amount = amount;
         _invoice.deadline = deadline;
         _invoice.termsAndConditions = termsAndConditions;
         _invoice.paymentterm = paymentTerm;
+
+        invoiceCreator = msg.sender;
         
-        invoices[msg.sender][invoiceId_] = _invoice;
-        invoiceCount[msg.sender]++;
+        invoices[invoiceCreator][invoiceId_] = _invoice;
+        invoiceCount[invoiceCreator]++;
         invoiceCounter++;
 
-        emit Events.InvoiceCreatedSuccessfully(msg.sender, clientAddress, amount, invoiceId_);
+        emit Events.InvoiceCreatedSuccessfully(invoiceCreator, clientAddress, amount, invoiceId_);
     }
 
     function acceptInvoice(uint256 _invoiceId) external{
@@ -179,13 +190,19 @@ contract PayNVoice {
         return invoiceCount[user];
     }
 
-    function generateAllInvoice() external view returns (Invoice[] memory) {
+
+
+    function generateAllInvoice() external view returns (Invoice[] memory) {    /*************************************************************/
         if(msg.sender == address(0)){
-            revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
+        revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         } 
+
         Invoice[] memory inv;
-        if(msg.sender == msg.sender){
+
+        if(msg.sender == invoiceCreator){
+
             uint256 invoiceCounting = getInvoiceCount(msg.sender);
+
             if(invoiceCounter < 1){
                 revert CustomErrors.INVOICE_NOT_GENERATED_YET();
             }
@@ -193,23 +210,27 @@ contract PayNVoice {
         } else {
             
             uint256 invoiceCount2 = getInvoiceCount(msg.sender);
+
             if(invoiceCount2 < 1){
                 revert CustomErrors.INVOICE_NOT_GENERATED_YET();
             }
+
             inv = returnHelperInvoices(invoiceCount2);
         }
+
         return inv;
     }
 
-
-
     function returnHelperInvoices(uint256 invoiceCou) private view returns(Invoice[] memory){
+        
         Invoice[] memory invoiceList = new Invoice[](invoiceCou);
+
             for(uint256 count = 1; count<=invoiceCou; count++){
                 invoiceList[count - 1] = invoices[msg.sender][count];
             }
             return invoiceList;
     }
+
 
     /*Client get a particular invoice*/
     function getInvoice(uint256 invoiceId) external returns (Invoice memory invoice1_) {
