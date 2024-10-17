@@ -1,0 +1,56 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "CustomErrors",
+  "sourceName": "contracts/library/ErrorsAndEvents.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "ADDRESS_ZERO_NOT_PERMITED",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "CANT_INITIATE_RELEASE",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "INVALID_ADDRESS",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "INVOICE_DOES_NOT_EXIST",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "INVOICE_NOT_FOR_YOU",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "INVOICE_NOT_GENERATED_YET",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NOT_AUTHORIZE_TO_CALL_THIS_FUNCTION",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "PAYMENT_HAS_BEEN_MADE",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "YOU_DID_NOT_DEPLOY_THIS_CONTRACT",
+      "type": "error"
+    }
+  ],
+  "bytecode": "0x60566050600b82828239805160001a6073146043577f4e487b7100000000000000000000000000000000000000000000000000000000600052600060045260246000fd5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea264697066735822122092bfc8d4c141c536c3eb846aac555d94c6ef0d9f45908aded7c26a3b3982b48064736f6c63430008180033",
+  "deployedBytecode": "0x73000000000000000000000000000000000000000030146080604052600080fdfea264697066735822122092bfc8d4c141c536c3eb846aac555d94c6ef0d9f45908aded7c26a3b3982b48064736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
