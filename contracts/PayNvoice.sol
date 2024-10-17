@@ -13,7 +13,7 @@ contract PayNVoice {
        address clientAddress;
        uint256 amount;
        uint256 deadline;
-       string tittle;
+       string title;
        string termsAndConditions;
        string paymentterm;
        bool areConditionsMet;
@@ -83,7 +83,7 @@ contract PayNVoice {
     }
 
 
-    function createInvoice(address clientAddress, uint256 amount, uint256 deadline, string memory termsAndConditions, string memory paymentTerm) public returns(uint256 invoiceId_) {
+    function createInvoice(address clientAddress, uint256 amount, uint256 deadline, string memory termsAndConditions, string memory paymentTerm, string memory title) public returns(uint256 invoiceId_) {
         if(msg.sender == address(0)){
             revert CustomErrors.ADDRESS_ZERO_NOT_PERMITED();
         }
@@ -103,7 +103,7 @@ contract PayNVoice {
         _invoice.deadline = deadline;
         _invoice.termsAndConditions = termsAndConditions;
         _invoice.paymentterm = paymentTerm;
-
+        _invoice.title =title;
         invoiceCreator = msg.sender;
         
         invoices[invoiceCreator][invoiceId_] = _invoice;
