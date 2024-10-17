@@ -13,6 +13,7 @@ contract PayNVoice {
        address clientAddress;
        uint256 amount;
        uint256 deadline;
+       string tittle;
        string termsAndConditions;
        string paymentterm;
        bool areConditionsMet;
